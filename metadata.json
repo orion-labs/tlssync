@@ -1,0 +1,53 @@
+{
+  "name": "tlssync",
+  "version": "0.1.0",
+  "package": "github.com/orion-labs/tlssync",
+  "description": "Sync a Kubernetes TLS Secret to a local file.",
+  "repository": "https://orionlabs-dbt-tools.s3.us-east-1.amazonaws.com",
+  "building": {
+    "targets": [
+      {
+        "name": "darwin/amd64"
+      },
+      {
+        "name": "linux/amd64"
+      }
+    ],
+    "extras": [
+      {
+        "template": "templates/description.tmpl",
+        "filename": "description.txt",
+        "executable": false
+      }
+    ]
+  },
+  "signing": {
+    "program": "gpg",
+    "email": "obci@orionlabs.io"
+
+  },
+  "publishing": {
+    "targets": [
+      {
+        "src": "description.txt",
+        "dst": "{{.Repository}}/{{.Name}}/{{.Version}}/description.txt",
+        "sig": true,
+        "checksums": false
+      },
+      {
+        "src": "tlssync_darwin_amd64",
+        "dst": "{{.Repository}}/{{.Name}}/{{.Version}}/darwin/amd64/{{.Name}}",
+        "sig": true,
+        "checksums": false
+      },
+      {
+        "src": "tlssync_linux_amd64",
+        "dst": "{{.Repository}}/{{.Name}}/{{.Version}}/linux/amd64/{{.Name}}",
+        "sig": true,
+        "checksums": false
+      }
+    ],
+    "usernamefunc": "echo -n $PUBLISH_USERNAME",
+    "passwordfunc": "echo -n $PUBLISH_PASSWORD"
+  }
+}

@@ -1,0 +1,56 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  test:
+    docker:
+      - image: circleci/golang:latest
+    steps:
+      - run:
+          name: Install Gomason
+          command: go get github.com/nikogura/gomason
+      - run:
+          name: Initialize GPG Agent
+          command: gpg-agent --daemon
+      - checkout
+      - run:
+          name: Run Tests
+          command: gomason test -v -b ${CIRCLE_BRANCH}
+
+  publish:
+    docker:
+      - image: circleci/golang:latest
+    steps:
+      - run:
+          name: Install Gomason
+          command: go get github.com/nikogura/gomason
+      - run:
+          name: Initialize GPG Agent
+          command: gpg-agent --daemon
+      - checkout
+      - run:
+          name: Stage Signing Key
+          command: |
+            echo "$SIGNING_PRIVATE_KEY" | base64 -d > obci@orionlabs.asc
+      - run:
+          name: Import Signing Key
+          command: gpg --import obci@orionlabs.asc
+      - run:
+          name: Publish
+          command: gomason publish -v
+
+workflows:
+  version: 2
+  primary:
+    jobs:
+      - test:
+          filters:
+            branches:
+              ignore:
+                - master
+      - publish:
+          filters:
+            branches:
+              only:
+                - master
