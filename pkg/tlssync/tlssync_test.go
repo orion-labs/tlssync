@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -43,13 +44,13 @@ func TestGetSecretByName(t *testing.T) {
 		Files []*TlsFile
 	}{
 		{
-			"ecr-registry",
+			"orion-wildcard",
 			[]*TlsFile{
 				&TlsFile{
-					SecretName:    "ecr-registry",
+					SecretName:    "orion-wildcard",
 					SeparateFiles: false,
-					FileBase:      "ecr-registry",
-					FilePath:      fmt.Sprintf("%s/tls", tmpDir),
+					FileBase:      "orion-wildcard",
+					FilePath:      tmpDir,
 				},
 			},
 		},
@@ -173,6 +174,51 @@ func TestLoadSecrets(t *testing.T) {
 						t.Errorf("Failed to find ostensibly created file %s: %s", fileName, err)
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestLoadConfig(t *testing.T) {
+	inputs := []struct {
+		name     string
+		input    string
+		expected []*TlsFile
+	}{
+		{
+			"wildcard",
+			`[
+  {
+    "secret_name": "orion-wildcard",
+    "separate_files": false,
+    "file_base": "orion-wildcard",
+    "file_path": "/tmp"
+  }
+]`,
+			[]*TlsFile{
+				&TlsFile{
+					SecretName:    "orion-wildcard",
+					SeparateFiles: false,
+					FileBase:      "orion-wildcard",
+					FilePath:      "/tmp",
+				},
+			},
+		},
+	}
+	for _, tc := range inputs {
+		t.Run(tc.name, func(t *testing.T) {
+			fileName := fmt.Sprintf("%s/%s.json", tmpDir, tc.name)
+			err := ioutil.WriteFile(fileName, []byte(tc.input), 0644)
+			if err != nil {
+				t.Errorf("failed writing fiile %s: %s", fileName, err)
+			}
+
+			actual, err := LoadConfig(fileName)
+			if err != nil {
+				t.Errorf("Failed to load config file %s:%s", fileName, err)
+			} else {
+				assert.Equal(t, tc.expected, actual, "Loading file does not produce the expected data object.")
+
 			}
 		})
 	}

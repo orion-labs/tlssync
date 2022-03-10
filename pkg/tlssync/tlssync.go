@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -38,10 +39,10 @@ const KEY_FILE_EXTENSION = "key"
 const CRT_FILE_EXTENSION = "crt"
 
 type TlsFile struct {
-	SecretName    string
-	SeparateFiles bool
-	FileBase      string
-	FilePath      string
+	SecretName    string `json:"secret_name"`
+	SeparateFiles bool   `json:"separate_files"`
+	FileBase      string `json:"file_base""`
+	FilePath      string `json:"file_path"`
 	Checksum      string
 	Data          map[string][]byte
 }
@@ -83,8 +84,10 @@ func NewTlsSync(tlsFiles []*TlsFile) (ts *TlsSync, err error) {
 		ts.MonitorSecretsInterval = DEFAULT_MONITOR_INTERVAL
 	}
 
-	// fire goroutine to check secrets on interval
-	go ts.CheckSecretsOnInterval()
+	err = ts.LoadSecrets()
+	if err != nil {
+		err = errors.Wrapf(err, "Initial secret load failed")
+	}
 
 	return ts, err
 }
@@ -256,7 +259,8 @@ func (ts *TlsSync) LoadSecrets() (err error) {
 	return err
 }
 
-func (ts *TlsSync) CheckSecretsOnInterval() {
+// MonitorSecrets Waits the configured seconds and then reloads the secrets it monitors, and updates the local files if they have changed.
+func (ts *TlsSync) MonitorSecrets() (err error) {
 	rand.Seed(time.Now().UnixNano())
 	n := rand.Intn(20)
 	sleepSeconds := time.Duration(ts.MonitorSecretsInterval + n)
@@ -270,9 +274,11 @@ func (ts *TlsSync) CheckSecretsOnInterval() {
 		err := ts.LoadSecrets()
 		if err != nil {
 			err = errors.Wrapf(err, "failed to load secrets")
-			log.Errorf("Error: %s", err)
+			return err
 		}
 	}
+
+	return err
 }
 
 func (ts *TlsSync) WritePEMFiles(tlsFile *TlsFile) (err error) {
@@ -313,4 +319,22 @@ func (ts *TlsSync) WritePEMFiles(tlsFile *TlsFile) (err error) {
 		}
 	}
 	return err
+}
+
+func LoadConfig(filePath string) (files []*TlsFile, err error) {
+	b, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		err = errors.Wrapf(err, "failed to load file %s", filePath)
+		return files, err
+	}
+
+	err = json.Unmarshal(b, &files)
+	if err != nil {
+		err = errors.Wrapf(err, "failed to marshal JSON data in %s", filePath)
+		return files, err
+	}
+
+	fmt.Printf("Unmarshalling produced no error\n")
+
+	return files, err
 }
