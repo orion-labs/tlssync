@@ -16,7 +16,6 @@ package cmd
 import (
 	"fmt"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/orion-labs/tlssync/pkg/tlssync"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
@@ -32,9 +31,8 @@ var rootCmd = &cobra.Command{
 	Long: "Sync a Kubernetes TLS Secret to a local file.",
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) {
-		tlssync.Run()
-	},
+	//Run: func(cmd *cobra.Command, args []string) {
+	//},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
