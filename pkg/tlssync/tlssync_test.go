@@ -192,7 +192,8 @@ func TestLoadConfig(t *testing.T) {
     "secret_name": "orion-wildcard",
     "separate_files": false,
     "file_base": "orion-wildcard",
-    "file_path": "/tmp"
+    "file_path": "/tmp",
+		"shell_command": "uname -a"
   }
 ]`,
 			[]*TlsFile{
@@ -201,6 +202,7 @@ func TestLoadConfig(t *testing.T) {
 					SeparateFiles: false,
 					FileBase:      "orion-wildcard",
 					FilePath:      "/tmp",
+					ShellCommand:  "uname -a",
 				},
 			},
 		},

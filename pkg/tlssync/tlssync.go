@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/util/homedir"
 	"math/rand"
 	"os"
+	"os/exec"
 	"sort"
 	"strconv"
 	"time"
@@ -45,6 +46,7 @@ type TlsFile struct {
 	FilePath      string `json:"file_path"`
 	Checksum      string
 	Data          map[string][]byte
+	ShellCommand  string `json:"shell_command"`
 }
 
 type TlsFiles []*TlsFile
@@ -57,6 +59,7 @@ type TlsSync struct {
 	SecretChecksums        map[string]string
 	MonitorSecretsInterval int
 	TlsFiles               []*TlsFile
+	FirstRun               bool
 }
 
 func NewTlsSync(tlsFiles []*TlsFile) (ts *TlsSync, err error) {
@@ -83,6 +86,8 @@ func NewTlsSync(tlsFiles []*TlsFile) (ts *TlsSync, err error) {
 	} else {
 		ts.MonitorSecretsInterval = DEFAULT_MONITOR_INTERVAL
 	}
+
+	ts.FirstRun = true
 
 	err = ts.LoadSecrets()
 	if err != nil {
@@ -253,8 +258,19 @@ func (ts *TlsSync) LoadSecrets() (err error) {
 				err = errors.Wrapf(err, "failed to write file for %s", tlsFile.SecretName)
 				return err
 			}
+
+			// Run the command on change if this is not the first run
+			if !ts.FirstRun {
+				err = ts.RunCommand(tlsFile)
+				if err != nil {
+					err = errors.Wrapf(err, "failed running %q", tlsFile.ShellCommand)
+					return err
+				}
+			}
 		}
 	}
+
+	ts.FirstRun = false
 
 	return err
 }
@@ -277,8 +293,6 @@ func (ts *TlsSync) MonitorSecrets() (err error) {
 			return err
 		}
 	}
-
-	return err
 }
 
 func (ts *TlsSync) WritePEMFiles(tlsFile *TlsFile) (err error) {
@@ -318,6 +332,26 @@ func (ts *TlsSync) WritePEMFiles(tlsFile *TlsFile) (err error) {
 			return err
 		}
 	}
+	return err
+}
+
+func (ts *TlsSync) RunCommand(tlsFile *TlsFile) (err error) {
+	bash, err := exec.LookPath("bash")
+	if err != nil {
+		err = errors.Wrap(err, "couldn't find bash on the path")
+		return err
+	}
+
+	cmd := exec.Command(bash, "-c", tlsFile.ShellCommand)
+
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	err = cmd.Run()
+	if err != nil {
+		err = errors.Wrapf(err, "failed running command %q for tlsFile %q", tlsFile.ShellCommand, tlsFile.SecretName)
+		return err
+	}
+
 	return err
 }
 
