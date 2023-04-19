@@ -1,7 +1,7 @@
 # Golang CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
-version: 2
+version: 2.1
 jobs:
   test:
     docker:
@@ -45,11 +45,17 @@ workflows:
   primary:
     jobs:
       - test:
+          context: 
+            - AWS-COMMON
+            - AWS-DBT-CI
           filters:
             branches:
               ignore:
                 - master
       - publish:
+          context: 
+            - AWS-COMMON
+            - AWS-DBT-CI
           filters:
             branches:
               only:
